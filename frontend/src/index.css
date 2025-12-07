@@ -1,0 +1,529 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================
+   LUXURY FONTS IMPORT
+   ================================ */
+
+/* Luxury Serif - Playfair Display */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
+
+/* Elegant Serif - Cormorant Garamond */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap');
+
+/* Modern Luxury - Montserrat */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+/* Clean Premium - Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+/* ================================
+   MODERN CLEAN THEME
+   White background with blue-teal gradient accents
+   ================================ */
+
+@layer base {
+  /* Apple-Inspired Font Smoothing */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    /* Clean white background */
+    background: #ffffff;
+    color: #0f172a;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Luxury heading styles */
+  h1, h2, h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ================================
+   CUSTOM SCROLLBAR
+   ================================ */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #4f46e5, #14b8a6);
+  border-radius: 10px;
+  border: 2px solid rgba(241, 245, 249, 0.5);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #6366f1, #2dd4bf);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4f46e5 rgba(241, 245, 249, 0.5);
+}
+
+/* ================================
+   GLASSMORPHISM UTILITIES
+   ================================ */
+
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(203, 213, 225, 0.3);
+  }
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(203, 213, 225, 0.4);
+  }
+
+  .glass-dark {
+    background: rgba(248, 250, 252, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(203, 213, 225, 0.3);
+  }
+
+  /* Modern Card Design */
+  .modern-card {
+    background: #ffffff;
+    border: 1px solid rgba(203, 213, 225, 0.5);
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.05);
+    transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modern-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.08);
+    border-color: rgba(45, 212, 191, 0.4);
+  }
+}
+
+/* ================================
+   LUXURY TYPOGRAPHY UTILITIES
+   ================================ */
+
+@layer utilities {
+  /* Luxury Display Text */
+  .text-luxury {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  /* Elegant Serif */
+  .text-elegant {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    line-height: 1.6;
+  }
+
+  /* Premium Sans */
+  .text-premium {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  /* Clean Modern */
+  .text-modern {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /* Gold Gradient Text */
+  .text-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #F4E5B2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Platinum Gradient Text */
+  .text-platinum {
+    background: linear-gradient(135deg, #E5E4E2 0%, #FFFFFF 50%, #C0C0C0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Wide Luxury Spacing */
+  .tracking-luxury {
+    letter-spacing: 0.15em;
+  }
+
+  /* Tight Luxury Spacing */
+  .tracking-tight-luxury {
+    letter-spacing: -0.03em;
+  }
+}
+
+/* ================================
+   GRADIENT TEXT UTILITIES
+   ================================ */
+
+@layer utilities {
+  .gradient-text-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #14b8a6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-accent {
+    background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-success {
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gradient Backgrounds */
+  .bg-primary-gradient {
+    background: linear-gradient(135deg, #4f46e5 0%, #14b8a6 100%);
+  }
+
+  .bg-accent-gradient {
+    background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+  }
+
+  .bg-light-gradient {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+  
+  /* Navigation Gradient */
+  .bg-nav-gradient {
+    background: linear-gradient(90deg, #4f46e5 0%, #3b82f6 50%, #14b8a6 100%);
+  }
+}
+
+/* ================================
+   ADVANCED ANIMATIONS
+   ================================ */
+
+@layer utilities {
+  /* Shimmer Loading State */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(203, 213, 225, 0.2) 0%,
+      rgba(203, 213, 225, 0.4) 50%,
+      rgba(203, 213, 225, 0.2) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  /* Pulse Glow Effect */
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(45, 212, 191, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(45, 212, 191, 0.6), 0 0 40px rgba(99, 102, 241, 0.3);
+    }
+  }
+
+  /* Hover Lift Effect */
+  .hover-lift {
+    transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  /* Scale on Hover */
+  .hover-scale {
+    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hover-scale:hover {
+    transform: scale(1.03);
+  }
+
+  /* Fade In Animation */
+  .fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ================================
+   FOCUS STATES & ACCESSIBILITY
+   ================================ */
+
+@layer base {
+  /* Better focus states with teal accent */
+  *:focus-visible {
+    outline: 2px solid #14b8a6;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #14b8a6;
+    outline-offset: 2px;
+  }
+
+  /* Remove default focus for mouse users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* ================================
+   FORM INPUT STYLES
+   ================================ */
+
+@layer components {
+  .modern-input {
+    background: #ffffff;
+    border: 1px solid rgba(203, 213, 225, 0.6);
+    border-radius: 0.625rem;
+    padding: 0.75rem 1rem;
+    color: #0f172a;
+    font-family: 'Inter', sans-serif;
+    transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modern-input:hover {
+    border-color: rgba(45, 212, 191, 0.5);
+    background: #fafafa;
+  }
+
+  .modern-input:focus {
+    outline: none;
+    border-color: #14b8a6;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1);
+  }
+
+  .modern-input::placeholder {
+    color: rgba(100, 116, 139, 0.5);
+  }
+
+  /* Better number input */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+  }
+}
+
+/* ================================
+   BUTTON STYLES
+   ================================ */
+
+@layer components {
+  .btn-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #14b8a6 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 0.625rem;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: 0.02em;
+    transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(79, 70, 229, 0.15);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(79, 70, 229, 0.2), 0 0 20px rgba(20, 184, 166, 0.3);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-accent {
+    background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 0.625rem;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: 0.02em;
+    transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(20, 184, 166, 0.15);
+  }
+
+  .btn-accent:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(20, 184, 166, 0.25);
+  }
+}
+
+/* ================================
+   TOUCH DEVICE OPTIMIZATIONS
+   ================================ */
+
+@media (hover: none) and (pointer: coarse) {
+  .hover-lift:hover,
+  .hover-scale:hover,
+  .modern-card:hover {
+    transform: none;
+  }
+
+  .hover-lift:active {
+    transform: scale(0.98);
+  }
+}
+
+/* ================================
+   LOADING STATES
+   ================================ */
+
+@layer components {
+  .loading-spinner {
+    border: 3px solid rgba(203, 213, 225, 0.3);
+    border-top-color: #14b8a6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+/* ================================
+   CUSTOM UTILITIES
+   ================================ */
+
+@layer utilities {
+  /* Text Shadow */
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Luxury Text Shadow */
+  .text-shadow-luxury {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Backdrop Blur Utilities */
+  .backdrop-blur-modern {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe Area Insets for Mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

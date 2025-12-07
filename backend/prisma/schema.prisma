@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Prisma Schema
+
+model PhoneNumber {
+  id              String   @id @default(cuid())
+  phoneNumber     String   @unique
+  friendlyName    String?
+  areaCode        String
+  twilioSid       String   @unique
+  campaignSid     String?
+  messagingServiceSid String?
+  purchaseDate    DateTime @default(now())
+  status          String   @default("active") // active, released, error
+  ghlAssignedTo   String?  // GHL user ID
+  ghlSyncedAt     DateTime?
+  
+  callLogs        CallLog[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CallLog {
+  id              String   @id @default(cuid())
+  phoneNumberId   String
+  phoneNumber     PhoneNumber @relation(fields: [phoneNumberId], references: [id])
+  
+  callSid         String   @unique
+  direction       String   // inbound, outbound
+  from            String
+  to              String
+  status          String   // completed, failed, busy, no-answer
+  duration        Int?     // in seconds
+  startTime       DateTime
+  endTime         DateTime?
+  errorCode       String?
+  errorMessage    String?
+  
+  createdAt       DateTime @default(now())
+}
+
+model GHLUser {
+  id              String   @id @default(cuid())
+  ghlUserId       String   @unique
+  name            String
+  email           String?
+  role            String?
+assignedNumbers String?  // Comma-separated phone number IDs (for SQLite)
+  
+  lastSyncedAt    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SystemConfig {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String
+  description     String?
+  
+  updatedAt       DateTime @updatedAt
+}
+
+model Closer {
+  id                    String   @id @default(cuid())
+  firstName             String
+  lastName              String
+  email                 String   @unique
+  phoneNumber           String?
+  
+  // Account IDs across platforms
+  googleWorkspaceId     String?
+  calendlyUserId        String?
+  zoomUserId            String?
+  ghlUserId             String?
+  twilioNumberSid       String?
+  twilioPhoneNumber     String?  // The 650 number assigned
+  
+  // Status tracking
+  status                String   @default("active") // active, offboarding, offboarded
+  onboardedAt           DateTime @default(now())
+  offboardedAt          DateTime?
+  
+  // Metadata
+  notes                 String?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}

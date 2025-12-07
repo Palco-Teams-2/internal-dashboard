@@ -1,0 +1,26 @@
+# Environment files (ignore .env everywhere)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Node
+node_modules
+npm-debug.log*
+
+# Build / dist
+dist
+build
+
+# System
+.DS_Store
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/*.db
+
+
+PROJECT.md
+.env
+*.env
+.env.local
