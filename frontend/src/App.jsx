@@ -8,6 +8,7 @@ import Analytics from './pages/Analytics';
 import SetterPerformance from './pages/Setterperformance';
 import CloserManagement from './pages/CloserManagement';
 import SystemStatus from './pages/SystemStatus';
+import CloserOnboarding from './pages/CloserOnboarding';
 
 // Placeholder pages for new routes
 const TeamManagement = () => <CloserManagement />;
@@ -38,6 +39,9 @@ function App() {
           
           {/* Legacy routes - keep for now */}
           <Route path="ghl" element={<GHLIntegration />} />
+
+          {/* Public Onboarding Page */}
+          <Route path="/onboard" element={<CloserOnboarding />} />
         </Route>
       </Routes>
     </BrowserRouter>
