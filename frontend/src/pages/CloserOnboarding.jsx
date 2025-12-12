@@ -1,21 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowRight, 
-  Mail, 
-  User, 
-  CheckCircle2,
-  Loader2,
-  Video,
-  Calendar,
-  Briefcase,
-  Phone,
-  Check,
-  AlertCircle
+  ArrowRight, Mail, User, CheckCircle2, Loader2,
+  Video, Calendar, Briefcase, Phone, AlertCircle
 } from 'lucide-react';
 
+const API_BASE = 'http://localhost:8080/api/onboarding';
+
 export default function CloserOnboarding() {
-  const [currentStep, setCurrentStep] = useState(0); // Start at 0 for instructions
+  const [currentStep, setCurrentStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
@@ -30,7 +23,7 @@ export default function CloserOnboarding() {
   });
   const [twilioNumber, setTwilioNumber] = useState('');
 
-  const totalSteps = 6; // Now 6 steps (0=instructions, 1-5=original steps)
+  const totalSteps = 6;
 
   const handleInputChange = (e) => {
     setFormData({
@@ -39,85 +32,136 @@ export default function CloserOnboarding() {
     });
   };
 
+  // Step 1: Submit form and create Google Workspace
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
     
-    // TODO: API call to create Google Workspace account
-    // For now, simulate the process
-    setTimeout(() => {
-      setCreatedAccount({
-        email: `${formData.firstName.toLowerCase()}@tjr-trades.com`,
-        password: 'TempPassword123!'
+    try {
+      const response = await fetch(`${API_BASE}/google-workspace`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
       });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setCreatedAccount({
+          email: data.email,
+          password: data.temporaryPassword
+        });
+        setIsProcessing(false);
+        setCurrentStep(2);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      alert(`Error: ${error.message}`);
       setIsProcessing(false);
-      setCurrentStep(2); // Was 2, now goes to step 2
-    }, 2000);
+    }
   };
 
-  const handleSendZoomInvite = () => {
+  // Step 2 → 3: Create Zoom
+  const handleSendZoomInvite = async () => {
     setIsSendingInvite(true);
     
-    // TODO: API call to send Zoom invitation
-    // For now, simulate the process
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE}/zoom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: createdAccount.email
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsSendingInvite(false);
+        setInviteSent(true);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      alert(`Zoom error: ${error.message}`);
       setIsSendingInvite(false);
-      setInviteSent(true);
-    }, 1500);
+    }
   };
 
-  const handleSendCalendlyInvite = () => {
+  // Step 3 → 4: Send Calendly
+  const handleSendCalendlyInvite = async () => {
     setIsSendingInvite(true);
     
-    // TODO: API call to send Calendly invitation
-    // For now, simulate the process
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE}/calendly`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: createdAccount.email
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsSendingInvite(false);
+        setInviteSent(true);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      alert(`Calendly error: ${error.message}`);
       setIsSendingInvite(false);
-      setInviteSent(true);
-    }, 1500);
+    }
   };
 
-  const handleSendGHLInvite = () => {
+  // Step 4 → 5: Create GHL + Twilio
+  const handleSendGHLInvite = async () => {
     setIsSendingInvite(true);
     
-    // TODO: API call to send GHL invitation + purchase Twilio number
-    // For now, simulate the process
-    setTimeout(() => {
-      setTwilioNumber('+1 (650) 555-0123'); // Dummy number
+    try {
+      const response = await fetch(`${API_BASE}/ghl-and-twilio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: createdAccount.email
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setTwilioNumber(data.twilioNumber);
+        setIsSendingInvite(false);
+        setInviteSent(true);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      alert(`GHL error: ${error.message}`);
       setIsSendingInvite(false);
-      setInviteSent(true);
-    }, 1500);
-  };
-
-  const handleContinueToCalendly = () => {
-    setCurrentStep(4); // Was 4, now 4
-    setInviteSent(false);
-  };
-
-  const handleContinueToGHL = () => {
-    setCurrentStep(5); // Was 5, now 5
-    setInviteSent(false);
-  };
-
-  const handleFinish = () => {
-    // TODO: Redirect to dashboard or show completion message
-    alert('Onboarding complete! You can now close this page.');
+    }
   };
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-6">
       <div className="w-full max-w-2xl">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
             Welcome to TJR Sales Team
           </h1>
           <p className="text-gray-600 text-lg">
-            Let's get you onboarded with all your tools and accounts
+            Let's get you onboarded with all your tools
           </p>
         </div>
 
-        {/* Progress Bar */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-gray-700">
@@ -130,229 +174,139 @@ export default function CloserOnboarding() {
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-black"
-              initial={{ width: 0 }}
               animate={{ width: `${(currentStep / totalSteps) * 100}%` }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.5 }}
             />
           </div>
         </div>
 
-        {/* Step Content */}
         <AnimatePresence mode="wait">
-          {/* STEP 0: Instructions / Welcome */}
+          {/* STEP 0: Instructions */}
           {currentStep === 0 && (
-            <motion.div
-              key="step0"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="step0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-6">
                     <Briefcase className="h-10 w-10 text-blue-600" />
                   </div>
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                    Welcome to TJR Sales Team
+                    Let's Get Started
                   </h2>
                   <p className="text-gray-600 text-lg">
-                    Let's get you set up with all your tools and accounts
+                    Complete each step at your own pace
                   </p>
                 </div>
 
-                <div className="space-y-6 mb-8">
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6">
+                <div className="space-y-4 mb-8">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                        <Mail className="h-6 w-6 text-white" />
-                      </div>
+                      <Mail className="h-8 w-8 text-blue-600 flex-shrink-0" />
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          Step 1: Google Workspace (@tjr-trades.com)
-                        </h3>
-                        <p className="text-gray-700 leading-relaxed">
-                          Your business email for <strong>all customer communication</strong>. This is NOT for personal use. 
-                          All calls and conversations with customers must go through this account.
-                        </p>
+                        <h3 className="font-bold text-gray-900 mb-2">Step 1: Google Workspace</h3>
+                        <p className="text-sm text-gray-700">Your business email (@tjr-trades.com)</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-6">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-                        <Video className="h-6 w-6 text-white" />
-                      </div>
+                      <Video className="h-8 w-8 text-indigo-600 flex-shrink-0" />
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          Step 2: Zoom Meeting Account
-                        </h3>
-                        <p className="text-gray-700 leading-relaxed">
-                          Associated with your @tjr-trades.com account. You'll get personal + team meeting links for sales calls. 
-                          <strong className="text-red-700"> All calls are RECORDED</strong>. Sales calls ONLY - no personal use.
-                        </p>
+                        <h3 className="font-bold text-gray-900 mb-2">Step 2: Zoom</h3>
+                        <p className="text-sm text-gray-700">Video calls (all recorded)</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-6">
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-6">
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
-                        <Calendar className="h-6 w-6 text-white" />
-                      </div>
+                      <Calendar className="h-8 w-8 text-green-600 flex-shrink-0" />
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          Step 3: Calendly Scheduling
-                        </h3>
-                        <p className="text-gray-700 leading-relaxed">
-                          Book and manage sales appointments. Integrated with your @tjr-trades.com calendar. 
-                          <strong> Sales use only</strong> - this is for customer-facing bookings.
-                        </p>
+                        <h3 className="font-bold text-gray-900 mb-2">Step 3: Calendly</h3>
+                        <p className="text-sm text-gray-700">Appointment scheduling</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-6">
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
-                        <Briefcase className="h-6 w-6 text-white" />
-                      </div>
+                      <Phone className="h-8 w-8 text-purple-600 flex-shrink-0" />
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          Step 4: GoHighLevel (GHL) CRM
-                        </h3>
-                        <p className="text-gray-700 leading-relaxed">
-                          Customer relationship management system. Track all leads and deals here. 
-                          You'll also get your <strong>650 area code sales number</strong> for making calls.
-                        </p>
+                        <h3 className="font-bold text-gray-900 mb-2">Step 4: GHL + 650 Number</h3>
+                        <p className="text-sm text-gray-700">CRM and sales phone</p>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-amber-900 mb-1">
-                        Important Notes
-                      </p>
-                      <ul className="text-sm text-amber-800 space-y-1">
-                        <li>• All accounts are for <strong>business use only</strong></li>
-                        <li>• Your @tjr-trades.com email is your primary work identity</li>
-                        <li>• All customer interactions must happen through these platforms</li>
-                        <li>• Never share login credentials with anyone</li>
-                      </ul>
                     </div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setCurrentStep(1)}
-                  className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base"
+                  className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                 >
-                  <span>Start Onboarding</span>
+                  <span>Let's Get Started</span>
                   <ArrowRight className="h-5 w-5" />
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 1: Initial Form */}
+          {/* STEP 1: Form */}
           {currentStep === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Your Information
-                </h2>
-                <p className="text-gray-600 mb-8">
-                  Please provide your basic information to get started
-                </p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Information</h2>
+                <p className="text-gray-600 mb-8">Please provide your basic information</p>
 
                 <form onSubmit={handleSubmitForm} className="space-y-6">
-                  {/* First Name */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      First Name
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="text"
-                        name="firstName"
-                        required
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                        placeholder="John"
-                      />
-                    </div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">First Name</label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      required
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                      placeholder="John"
+                    />
                   </div>
 
-                  {/* Last Name */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Last Name
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="text"
-                        name="lastName"
-                        required
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                        placeholder="Doe"
-                      />
-                    </div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      required
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                      placeholder="Doe"
+                    />
                   </div>
 
-                  {/* Personal Email */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Personal Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="email"
-                        name="personalEmail"
-                        required
-                        value={formData.personalEmail}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                        placeholder="john.doe@gmail.com"
-                      />
-                    </div>
-                    <p className="text-sm text-gray-500 mt-2">
-                      We'll send your account details to this email
-                    </p>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Personal Email</label>
+                    <input
+                      type="email"
+                      name="personalEmail"
+                      required
+                      value={formData.personalEmail}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                      placeholder="john.doe@gmail.com"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">We'll send account details here</p>
                   </div>
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={isProcessing}
-                    className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base disabled:opacity-50"
+                    className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isProcessing ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Creating Your Account...</span>
-                      </>
+                      <><Loader2 className="h-5 w-5 animate-spin" /><span>Creating...</span></>
                     ) : (
-                      <>
-                        <span>Continue</span>
-                        <ArrowRight className="h-5 w-5" />
-                      </>
+                      <><span>Continue</span><ArrowRight className="h-5 w-5" /></>
                     )}
                   </button>
                 </form>
@@ -360,482 +314,228 @@ export default function CloserOnboarding() {
             </motion.div>
           )}
 
-          {/* STEP 2: Google Workspace Success */}
+          {/* STEP 2: Google Workspace Created */}
           {currentStep === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
                     <CheckCircle2 className="h-8 w-8 text-green-600" />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Google Workspace Account Created!
-                  </h2>
-                  <p className="text-gray-600">
-                    Your company email has been set up successfully
-                  </p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Google Workspace Created!</h2>
+                  <p className="text-gray-600">Your company email is ready</p>
                 </div>
 
-                {/* Account Details */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-8">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">
-                    Your Account Details
-                  </h3>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase">Account Details</h3>
                   
                   <div className="space-y-4">
-                    {/* Email */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                        Company Email Address
-                      </label>
-                      <div className="flex items-center gap-3 bg-white border border-gray-300 rounded-lg p-3">
-                        <Mail className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                        <span className="font-mono text-sm text-gray-900 font-semibold">
-                          {createdAccount.email}
-                        </span>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Company Email</label>
+                      <div className="bg-white border border-gray-300 rounded-lg p-3">
+                        <span className="font-mono text-sm font-semibold">{createdAccount.email}</span>
                       </div>
                     </div>
 
-                    {/* Temporary Password */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                        Temporary Password
-                      </label>
-                      <div className="flex items-center gap-3 bg-white border border-gray-300 rounded-lg p-3">
-                        <div className="flex-1 font-mono text-sm text-gray-900 font-semibold">
-                          {createdAccount.password}
-                        </div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Temporary Password</label>
+                      <div className="bg-white border border-gray-300 rounded-lg p-3">
+                        <span className="font-mono text-sm font-semibold">{createdAccount.password}</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        ⚠️ You'll be asked to change this password on your first login
-                      </p>
+                      <p className="text-xs text-gray-500 mt-2">⚠️ Change on first login</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Instructions */}
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                  <h3 className="text-sm font-semibold text-blue-900 mb-3">
-                    📧 Email Sent!
-                  </h3>
+                  <h3 className="text-sm font-semibold text-blue-900 mb-2">📧 Email Sent!</h3>
                   <p className="text-sm text-blue-800">
-                    We've sent these credentials to <strong>{formData.personalEmail}</strong>. Please check your inbox for the welcome email.
+                    Check <strong>{formData.personalEmail}</strong> for details
                   </p>
                 </div>
 
-                {/* Next Button */}
                 <button
                   onClick={() => setCurrentStep(3)}
-                  className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base"
+                  className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2"
                 >
-                  <span>Continue to Zoom Setup</span>
+                  <span>Continue to Zoom</span>
                   <ArrowRight className="h-5 w-5" />
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STEP 3: Zoom Invitation */}
+          {/* STEP 3: Zoom */}
           {currentStep === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="step3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
                     <Video className="h-8 w-8 text-indigo-600" />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Add Zoom Account
-                  </h2>
-                  <p className="text-gray-600">
-                    Set up your video conferencing account
-                  </p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Zoom Setup</h2>
+                  <p className="text-gray-600">Create your Zoom account</p>
                 </div>
 
-                {/* Prefilled Information */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">
-                    Account Information
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between py-2">
-                      <span className="text-sm text-gray-600">Name</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {formData.firstName} {formData.lastName}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                      <span className="text-sm text-gray-600">Email</span>
-                      <span className="text-sm font-semibold text-gray-900 font-mono">
-                        {createdAccount.email}
-                      </span>
-                    </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Account Email</h3>
+                  <div className="bg-gray-200 border border-gray-300 rounded-lg p-3">
+                    <span className="font-mono text-sm text-gray-700 font-semibold">{createdAccount.email}</span>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">Zoom will use this email</p>
                 </div>
 
-                {/* Invitation Status */}
-                {!inviteSent ? (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                      📹 Ready to Send Zoom Invitation
-                    </h3>
-                    <p className="text-sm text-blue-800">
-                      Click the button below to send a Zoom invitation to <strong>{createdAccount.email}</strong>
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h3 className="text-sm font-semibold text-green-900 mb-2">
-                          ✅ Zoom Invitation Sent!
-                        </h3>
-                        <p className="text-sm text-green-800">
-                          Please check <strong>{createdAccount.email}</strong> for your Zoom invitation email and follow the instructions to activate your account.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
                 {!inviteSent ? (
                   <button
                     onClick={handleSendZoomInvite}
                     disabled={isSendingInvite}
-                    className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base disabled:opacity-50"
+                    className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSendingInvite ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Sending Invitation...</span>
-                      </>
+                      <><Loader2 className="h-5 w-5 animate-spin" /><span>Creating...</span></>
                     ) : (
-                      <>
-                        <Video className="h-5 w-5" />
-                        <span>Send Zoom Invitation</span>
-                      </>
+                      <><span>Create Zoom Account</span><ArrowRight className="h-5 w-5" /></>
                     )}
                   </button>
                 ) : (
-                  <button
-                    onClick={handleContinueToCalendly}
-                    className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base"
-                  >
-                    <span>Continue to Calendly Setup</span>
-                    <ArrowRight className="h-5 w-5" />
-                  </button>
+                  <>
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0" />
+                        <div>
+                          <h3 className="text-sm font-semibold text-green-900 mb-2">Zoom Created!</h3>
+                          <p className="text-sm text-green-800">Check {createdAccount.email} for instructions</p>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setCurrentStep(4); setInviteSent(false); }}
+                      className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2"
+                    >
+                      <span>Continue to Calendly</span>
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
+                  </>
                 )}
               </div>
             </motion.div>
           )}
 
-          {/* STEP 4: Calendly Invitation */}
+          {/* STEP 4: Calendly */}
           {currentStep === 4 && (
-            <motion.div
-              key="step4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="step4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
                     <Calendar className="h-8 w-8 text-green-600" />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Add Calendly Account
-                  </h2>
-                  <p className="text-gray-600">
-                    Set up your scheduling and calendar integration
-                  </p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Calendly Setup</h2>
+                  <p className="text-gray-600">Set up appointment booking</p>
                 </div>
 
-                {/* Prefilled Information */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">
-                    Account Information
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between py-2">
-                      <span className="text-sm text-gray-600">Name</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {formData.firstName} {formData.lastName}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                      <span className="text-sm text-gray-600">Email</span>
-                      <span className="text-sm font-semibold text-gray-900 font-mono">
-                        {createdAccount.email}
-                      </span>
-                    </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Account Email</h3>
+                  <div className="bg-gray-200 border border-gray-300 rounded-lg p-3">
+                    <span className="font-mono text-sm text-gray-700 font-semibold">{createdAccount.email}</span>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">Calendly invitation will be sent here</p>
                 </div>
 
-                {/* Invitation Status */}
-                {!inviteSent ? (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                      📅 Ready to Send Calendly Invitation
-                    </h3>
-                    <p className="text-sm text-blue-800">
-                      Click the button below to send a Calendly invitation to <strong>{createdAccount.email}</strong>
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h3 className="text-sm font-semibold text-green-900 mb-2">
-                          ✅ Calendly Invitation Sent!
-                        </h3>
-                        <p className="text-sm text-green-800">
-                          Please check <strong>{createdAccount.email}</strong> for your Calendly invitation email and follow the instructions to activate your account.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
                 {!inviteSent ? (
                   <button
                     onClick={handleSendCalendlyInvite}
                     disabled={isSendingInvite}
-                    className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base disabled:opacity-50"
+                    className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSendingInvite ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Sending Invitation...</span>
-                      </>
+                      <><Loader2 className="h-5 w-5 animate-spin" /><span>Sending...</span></>
                     ) : (
-                      <>
-                        <Calendar className="h-5 w-5" />
-                        <span>Send Calendly Invitation</span>
-                      </>
+                      <><span>Send Calendly Invitation</span><ArrowRight className="h-5 w-5" /></>
                     )}
                   </button>
                 ) : (
-                  <button
-                    onClick={handleContinueToGHL}
-                    className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base"
-                  >
-                    <span>Continue to GHL Setup</span>
-                    <ArrowRight className="h-5 w-5" />
-                  </button>
+                  <>
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0" />
+                        <div>
+                          <h3 className="text-sm font-semibold text-green-900 mb-2">Invitation Sent!</h3>
+                          <p className="text-sm text-green-800">Check {createdAccount.email} to accept</p>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setCurrentStep(5); setInviteSent(false); }}
+                      className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2"
+                    >
+                      <span>Continue to GHL & Phone</span>
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
+                  </>
                 )}
               </div>
             </motion.div>
           )}
 
-          {/* STEP 5: GHL Invitation + Completion */}
+          {/* STEP 5: GHL + Twilio */}
           {currentStep === 5 && (
-            <motion.div
-              key="step5"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="step5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+                    <Briefcase className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">GHL & Sales Phone</h2>
+                  <p className="text-gray-600">Final step: CRM and sales number</p>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Account Email</h3>
+                  <div className="bg-gray-200 border border-gray-300 rounded-lg p-3">
+                    <span className="font-mono text-sm text-gray-700 font-semibold">{createdAccount.email}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">GHL will use this email</p>
+                </div>
+
                 {!inviteSent ? (
-                  <>
-                    <div className="text-center mb-8">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
-                        <Briefcase className="h-8 w-8 text-purple-600" />
-                      </div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                        Add GoHighLevel Account
-                      </h2>
-                      <p className="text-gray-600">
-                        Set up your CRM and get your sales phone number
-                      </p>
-                    </div>
-
-                    {/* Prefilled Information */}
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">
-                        Account Information
-                      </h3>
-                      
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between py-2">
-                          <span className="text-sm text-gray-600">Name</span>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {formData.firstName} {formData.lastName}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between py-2 border-t border-gray-200">
-                          <span className="text-sm text-gray-600">Email</span>
-                          <span className="text-sm font-semibold text-gray-900 font-mono">
-                            {createdAccount.email}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Invitation Status */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                      <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                        🚀 Final Step - GHL & Phone Number
-                      </h3>
-                      <p className="text-sm text-blue-800">
-                        Click the button below to send your GHL invitation and automatically assign you a 650 area code phone number for sales calls.
-                      </p>
-                    </div>
-
-                    {/* Action Button */}
-                    <button
-                      onClick={handleSendGHLInvite}
-                      disabled={isSendingInvite}
-                      className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base disabled:opacity-50"
-                    >
-                      {isSendingInvite ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          <span>Setting Up...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Briefcase className="h-5 w-5" />
-                          <span>Send GHL Invitation & Assign Number</span>
-                        </>
-                      )}
-                    </button>
-                  </>
+                  <button
+                    onClick={handleSendGHLInvite}
+                    disabled={isSendingInvite}
+                    className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSendingInvite ? (
+                      <><Loader2 className="h-5 w-5 animate-spin" /><span>Setting up...</span></>
+                    ) : (
+                      <><span>Create GHL & Get Phone</span><ArrowRight className="h-5 w-5" /></>
+                    )}
+                  </button>
                 ) : (
                   <>
-                    {/* Completion Success */}
-                    <div className="text-center mb-8">
-                      <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
-                        <Check className="h-10 w-10 text-green-600" />
-                      </div>
-                      <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                        All Set! Welcome to the Team! 🎉
-                      </h2>
-                      <p className="text-gray-600 text-lg">
-                        Your onboarding is complete
-                      </p>
-                    </div>
-
-                    {/* Summary Cards */}
-                    <div className="space-y-4 mb-8">
-                      {/* Google Workspace */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Mail className="h-5 w-5 text-blue-600" />
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <h3 className="text-sm font-semibold text-green-900 mb-3">All Set! 🎉</h3>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-green-700" />
+                              <span className="text-sm text-green-800">
+                                Your 650 Number: <strong className="font-mono">{twilioNumber}</strong>
+                              </span>
+                            </div>
+                            <p className="text-sm text-green-800">
+                              GHL created. Check {createdAccount.email} for login
+                            </p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">Google Workspace</p>
-                            <p className="text-xs text-gray-600 truncate font-mono">{createdAccount.email}</p>
-                          </div>
-                          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-                        </div>
-                      </div>
-
-                      {/* Zoom */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                            <Video className="h-5 w-5 text-indigo-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">Zoom</p>
-                            <p className="text-xs text-gray-600">Invitation sent</p>
-                          </div>
-                          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-                        </div>
-                      </div>
-
-                      {/* Calendly */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Calendar className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">Calendly</p>
-                            <p className="text-xs text-gray-600">Invitation sent</p>
-                          </div>
-                          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-                        </div>
-                      </div>
-
-                      {/* GHL */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Briefcase className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">GoHighLevel</p>
-                            <p className="text-xs text-gray-600">Invitation sent</p>
-                          </div>
-                          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-                        </div>
-                      </div>
-
-                      {/* Phone Number */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                            <Phone className="h-5 w-5 text-red-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">Sales Phone Number</p>
-                            <p className="text-xs text-gray-600 font-mono font-semibold">{twilioNumber}</p>
-                          </div>
-                          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
                         </div>
                       </div>
                     </div>
-
-                    {/* Next Steps */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-                      <h3 className="text-sm font-semibold text-blue-900 mb-3">
-                        📧 What's Next?
-                      </h3>
-                      <ul className="text-sm text-blue-800 space-y-2">
-                        <li className="flex items-start gap-2">
-                          <span className="flex-shrink-0">•</span>
-                          <span>Check <strong>{formData.personalEmail}</strong> for all invitation emails</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="flex-shrink-0">•</span>
-                          <span>Accept all invitations and set up your accounts</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="flex-shrink-0">•</span>
-                          <span>Your sales manager will reach out to schedule your training</span>
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Finish Button */}
                     <button
-                      onClick={handleFinish}
-                      className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base"
+                      onClick={() => alert('✅ Onboarding complete! Check your email for all account details.')}
+                      className="w-full bg-black text-white font-semibold py-4 px-6 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2"
                     >
-                      <Check className="h-5 w-5" />
-                      <span>Complete Onboarding</span>
+                      <CheckCircle2 className="h-5 w-5" />
+                      <span>Finish Onboarding</span>
                     </button>
                   </>
                 )}

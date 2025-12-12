@@ -222,12 +222,23 @@ router.post('/onboard', async (req, res) => {
       const numberToPurchase = availableNumbers[0].phoneNumber;
       const friendlyName = `${firstName} ${lastName}`;
       
+      // Purchase the number
       const purchased = await twilioService.purchaseNumber(numberToPurchase, friendlyName);
+      
+      // Add to messaging service
       await twilioService.addToMessagingService(purchased.sid);
+      
+      // Add to A2P campaign
+      const campaignResult = await twilioService.addToCampaign(purchased.sid);
       
       progress.twilio = { 
         status: 'success', 
-        data: { phoneNumber: purchased.phoneNumber, sid: purchased.sid, friendlyName: purchased.friendlyName },
+        data: { 
+          phoneNumber: purchased.phoneNumber, 
+          sid: purchased.sid, 
+          friendlyName: purchased.friendlyName,
+          addedToCampaign: campaignResult.success
+        },
         error: null 
       };
       console.log(`[Closers] ✅ 650 number assigned: ${purchased.phoneNumber}`);
@@ -236,17 +247,19 @@ router.post('/onboard', async (req, res) => {
       progress.twilio = { status: 'failed', data: null, error: error.message };
     }
 
-    // Step 5: GHL
+    // Step 5: GHL - Create user only (manual number assignment in GHL UI)
     try {
-      console.log('[Closers] Step 5/5: Adding to GHL...');
-      const ghlResult = {
-        userId: `ghl_${Date.now()}`,
-        email: workEmail,
-        status: 'invited',
-        message: '⚠️ DUMMY MODE: GHL invitation simulated'
+      console.log('[Closers] Step 5/5: Creating GHL user...');
+      const ghlResult = await ghlService.createUser(firstName, lastName, workEmail, 'user');
+      progress.ghl = { 
+        status: 'success', 
+        data: {
+          ...ghlResult,
+          note: '650 number must be manually assigned in GHL UI'
+        }, 
+        error: null 
       };
-      progress.ghl = { status: 'success', data: ghlResult, error: null };
-      console.log('[Closers] ✅ GHL invitation sent');
+      console.log('[Closers] ✅ GHL user created');
     } catch (error) {
       console.error('[Closers] ⚠️ GHL failed:', error.message);
       progress.ghl = { status: 'failed', data: null, error: error.message };

@@ -97,6 +97,75 @@ class GHLService {
     }
   }
 
+  // Create a new user in GHL
+  async createUser(firstName, lastName, email, role = 'user') {
+    try {
+      console.log(`[GHL Service] Creating user: ${email}`);
+      
+      const userData = {
+        companyId: '0-229-055', // Agency company ID
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        type: 'account',
+        role: role,
+        locationIds: [this.locationId],
+        permissions: {
+          campaignsEnabled: true,
+          campaignsReadOnly: false,
+          contactsEnabled: true,
+          dashboardStatsEnabled: true,
+          bulkRequestsEnabled: true,
+          appointmentsEnabled: true,
+          reviewsEnabled: true,
+          onlineListingsEnabled: true,
+          phoneCallEnabled: true,
+          conversationsEnabled: true,
+          opportunitiesEnabled: true,
+          paymentsEnabled: false,
+          triggersEnabled: false,
+          funnelsEnabled: false,
+          websitesEnabled: false,
+          contentAiEnabled: false,
+          attributionsEnabled: true,
+          settingsEnabled: false,
+          tagsEnabled: true,
+          leadValueEnabled: true,
+          marketingEnabled: true,
+          agentReportingEnabled: true,
+          botService: false,
+          socialPlanner: false,
+          bloggingEnabled: false,
+          invoiceEnabled: false,
+          affiliateManagerEnabled: false,
+          contentAiEditingEnabled: false,
+          recordPaymentEnabled: false,
+          cancelSubscriptionEnabled: false,
+          emailsEnabled: true
+        }
+      };
+
+      const response = await this.client.post('/users/', userData, {
+        params: {
+          locationId: this.locationId
+        }
+      });
+
+      console.log(`[GHL Service] ✅ User created in location ${this.locationId}: ${response.data.id || response.data.userId}`);
+      
+      return {
+        success: true,
+        userId: response.data.id || response.data.userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName
+      };
+    } catch (error) {
+      console.error('[GHL Service] Error creating user:', error.response?.data || error.message);
+      throw new Error(`Failed to create GHL user: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
   // Delete/remove a user from GHL
   async deleteUser(userId) {
     try {
@@ -113,14 +182,54 @@ class GHLService {
     }
   }
 
-  // Assign phone number to user (this might need to be done through GHL UI or different endpoint)
-  async assignNumberToUser(phoneNumber, userId) {
-    console.log(`Assignment requested: ${phoneNumber} to ${userId}`);
-    return { 
-      message: 'Assignment tracking in local DB. Manual assignment in GHL UI may be required.',
-      phoneNumber,
-      userId 
-    };
+  // Assign phone number to user in GHL
+  async assignNumberToUser(phoneNumber, userId, userName = null) {
+    try {
+      console.log(`[GHL Service] Assigning ${phoneNumber} to user ${userId}`);
+      
+      // First, add the phone number to GHL location if not already there
+      try {
+        await this.addPhoneNumber(phoneNumber, userName || phoneNumber);
+        console.log(`[GHL Service] Phone number added to location`);
+      } catch (error) {
+        // Number might already exist, that's okay
+        console.log(`[GHL Service] Phone number may already exist in location: ${error.message}`);
+      }
+      
+      // Get all phone numbers in GHL to find the one we just added
+      const ghlNumbers = await this.getPhoneNumbers();
+      const ghlNumber = ghlNumbers.find(n => 
+        this.normalizePhone(n.phoneNumber || n.number) === this.normalizePhone(phoneNumber)
+      );
+      
+      if (!ghlNumber) {
+        throw new Error('Phone number not found in GHL after adding');
+      }
+      
+      // Update the phone number to assign it to the user
+      // GHL uses the linkedUser field to assign numbers to users
+      const phoneNumberId = ghlNumber.id || ghlNumber._id;
+      
+      const response = await this.client.put(
+        `/phone-system/numbers/${phoneNumberId}`,
+        {
+          linkedUser: userId,
+          name: userName || phoneNumber
+        }
+      );
+      
+      console.log(`[GHL Service] ✅ Phone number assigned to user ${userId}`);
+      
+      return { 
+        success: true,
+        phoneNumber,
+        userId,
+        phoneNumberId
+      };
+    } catch (error) {
+      console.error('[GHL Service] Error assigning phone number:', error.response?.data || error.message);
+      throw new Error(`Failed to assign phone number in GHL: ${error.response?.data?.message || error.message}`);
+    }
   }
 
   // Add method to compare Twilio vs GHL numbers

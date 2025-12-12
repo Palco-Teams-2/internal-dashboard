@@ -6,6 +6,7 @@ dotenv.config();
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+const campaignSid = process.env.TWILIO_CAMPAIGN_SID;
 
 // Create Twilio client
 const client = twilio(accountSid, authToken);
@@ -119,6 +120,31 @@ class TwilioService {
       return { success: true };
     } catch (error) {
       console.error('[Twilio] Error adding to messaging service:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Add phone number to A2P campaign
+  async addToCampaign(phoneNumberSid) {
+    try {
+      if (!campaignSid) {
+        console.warn('[Twilio] No campaign SID configured, skipping A2P campaign assignment...');
+        return { success: false, error: 'Campaign SID not configured' };
+      }
+
+      console.log(`[Twilio] Registering ${phoneNumberSid} with A2P campaign ${campaignSid}`);
+
+      // Update the phone number to assign it to the campaign
+      const updatedNumber = await client.incomingPhoneNumbers(phoneNumberSid)
+        .update({
+          bundleSid: campaignSid // Assign to A2P campaign/bundle
+        });
+
+      console.log(`[Twilio] ✅ Phone number registered with A2P campaign`);
+      return { success: true, data: updatedNumber };
+    } catch (error) {
+      console.error('[Twilio] Error adding to A2P campaign:', error.message);
+      // Don't fail the whole onboarding if A2P fails
       return { success: false, error: error.message };
     }
   }
