@@ -7,7 +7,8 @@ import analyticsRouter from './routes/analytics.js';
 import ghlRouter from './routes/ghl.js';
 import closersRouter from './routes/closers.js';
 import calendlyRouter from './routes/calendly.js';
-import onboardingStepsRouter from './routes/onboarding-steps.js'; // ADD THIS
+import onboardingStepsRouter from './routes/onboarding-steps.js';
+import whopRouter from './routes/whop.js';
 
 dotenv.config();
 
@@ -29,7 +30,8 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/ghl', ghlRouter);
 app.use('/api/closers', closersRouter);
 app.use('/api/calendly', calendlyRouter);
-app.use('/api/onboarding', onboardingStepsRouter); // ADD THIS
+app.use('/api/onboarding', onboardingStepsRouter);
+app.use('/api/whop', whopRouter);
 
 // Fallback 404 for unknown API routes
 app.use('/api/*', (req, res) => {

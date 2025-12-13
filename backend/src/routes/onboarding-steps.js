@@ -7,21 +7,40 @@ import twilioService from '../services/twilioService.js';
 
 const router = express.Router();
 
-// Step 1: Create Google Workspace account only
+// Step 1: Create Google Workspace account only (with resume support)
 router.post('/google-workspace', async (req, res) => {
   try {
     const { firstName, lastName, personalEmail } = req.body;
 
     if (!firstName || !lastName) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'First name and last name are required' 
+        error: 'First name and last name are required'
       });
     }
 
-    console.log(`[Onboard Step 1] Creating Google Workspace for ${firstName} ${lastName}`);
+    console.log(`[Onboard Step 1] Processing Google Workspace for ${firstName} ${lastName}`);
 
-    // Generate email
+    // Generate what the email would be for this user
+    const domain = 'tjr-trades.com';
+    const expectedEmail = `${firstName.toLowerCase()}-${lastName.charAt(0).toLowerCase()}@${domain}`;
+
+    // Check if user already exists
+    const existingUser = await googleWorkspaceService.getAccount(expectedEmail);
+
+    if (existingUser) {
+      console.log(`[Onboard Step 1] ✅ User already exists: ${expectedEmail}`);
+      return res.json({
+        success: true,
+        email: expectedEmail,
+        temporaryPassword: 'Tjrtrades123!',
+        googleWorkspaceId: existingUser.id,
+        alreadyExists: true,
+        message: `Google Workspace account already exists for ${expectedEmail}`
+      });
+    }
+
+    // Generate unique email (handles duplicates like firstname-l2@domain)
     const workEmail = await googleWorkspaceService.generateEmail(firstName, lastName);
     console.log(`[Onboard Step 1] Generated email: ${workEmail}`);
 
@@ -45,26 +64,40 @@ router.post('/google-workspace', async (req, res) => {
 
   } catch (error) {
     console.error('[Onboard Step 1] Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: error.message 
+      error: error.message
     });
   }
 });
 
-// Step 2: Create Zoom account only
+// Step 2: Create Zoom account only (with resume support)
 router.post('/zoom', async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
 
     if (!firstName || !lastName || !email) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'First name, last name, and email are required' 
+        error: 'First name, last name, and email are required'
       });
     }
 
-    console.log(`[Onboard Step 2] Creating Zoom account for ${email}`);
+    console.log(`[Onboard Step 2] Processing Zoom account for ${email}`);
+
+    // Check if Zoom user already exists
+    const existingUser = await zoomService.getUserByEmail(email);
+
+    if (existingUser) {
+      console.log(`[Onboard Step 2] ✅ Zoom user already exists: ${email}`);
+      return res.json({
+        success: true,
+        userId: existingUser.id,
+        email: existingUser.email,
+        alreadyExists: true,
+        message: 'Zoom account already exists'
+      });
+    }
 
     const zoomResult = await zoomService.createUser(firstName, lastName, email);
     console.log(`[Onboard Step 2] ✅ Zoom account created`);
@@ -78,26 +111,40 @@ router.post('/zoom', async (req, res) => {
 
   } catch (error) {
     console.error('[Onboard Step 2] Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: error.message 
+      error: error.message
     });
   }
 });
 
-// Step 3: Send Calendly invitation only
+// Step 3: Send Calendly invitation only (with resume support)
 router.post('/calendly', async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
 
     if (!firstName || !lastName || !email) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'First name, last name, and email are required' 
+        error: 'First name, last name, and email are required'
       });
     }
 
-    console.log(`[Onboard Step 3] Sending Calendly invitation to ${email}`);
+    console.log(`[Onboard Step 3] Processing Calendly invitation for ${email}`);
+
+    // Check if user is already a Calendly member
+    const existingUser = await calendlyService.getUserByEmail(email);
+
+    if (existingUser) {
+      console.log(`[Onboard Step 3] ✅ User already in Calendly: ${email}`);
+      return res.json({
+        success: true,
+        email: existingUser.email,
+        invitationUri: null,
+        alreadyExists: true,
+        message: 'User is already a Calendly member'
+      });
+    }
 
     try {
       const calendlyResult = await calendlyService.inviteUser(email, firstName, lastName);
@@ -112,7 +159,7 @@ router.post('/calendly', async (req, res) => {
     } catch (apiError) {
       // If API invitation fails, return success but note manual invitation needed
       console.log(`[Onboard Step 3] ⚠️ API invitation failed, flagging for manual invitation`);
-      
+
       res.json({
         success: true,
         email: email,
@@ -124,63 +171,73 @@ router.post('/calendly', async (req, res) => {
 
   } catch (error) {
     console.error('[Onboard Step 3] Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: error.message 
+      error: error.message
     });
   }
 });
 
-// Step 4: Create GHL account + Purchase Twilio 650 number
+// Step 4: Create GHL account + Purchase Twilio 650 number (with resume support)
 router.post('/ghl-and-twilio', async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
 
     if (!firstName || !lastName || !email) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'First name, last name, and email are required' 
+        error: 'First name, last name, and email are required'
       });
     }
 
-    console.log(`[Onboard Step 4] Creating GHL account and purchasing Twilio number for ${email}`);
+    console.log(`[Onboard Step 4] Processing GHL account and Twilio number for ${email}`);
 
     let ghlUserId = null;
     let twilioNumber = null;
+    let ghlAlreadyExists = false;
 
-    // Create GHL account
-    try {
-      console.log('[Onboard Step 4] Creating GHL account...');
-      const ghlResult = await ghlService.createUser(firstName, lastName, email, 'user');
-      ghlUserId = ghlResult.userId;
-      console.log('[Onboard Step 4] ✅ GHL account created');
-    } catch (error) {
-      console.error('[Onboard Step 4] GHL creation failed:', error.message);
-      throw new Error(`GHL account creation failed: ${error.message}`);
+    // Check if GHL user already exists
+    const existingGhlUser = await ghlService.getUserByEmail(email);
+
+    if (existingGhlUser) {
+      console.log(`[Onboard Step 4] ✅ GHL user already exists: ${email}`);
+      ghlUserId = existingGhlUser.id;
+      ghlAlreadyExists = true;
+    } else {
+      // Create GHL account
+      try {
+        console.log('[Onboard Step 4] Creating GHL account...');
+        const ghlResult = await ghlService.createUser(firstName, lastName, email, 'user');
+        ghlUserId = ghlResult.userId;
+        console.log('[Onboard Step 4] ✅ GHL account created');
+      } catch (error) {
+        console.error('[Onboard Step 4] GHL creation failed:', error.message);
+        throw new Error(`GHL account creation failed: ${error.message}`);
+      }
     }
 
     // Purchase Twilio 650 number
     try {
       console.log('[Onboard Step 4] Purchasing 650 number...');
       const availableNumbers = await twilioService.searchAvailableNumbers('650', 5);
-      
+
       if (availableNumbers.length === 0) {
         throw new Error('No available 650 numbers found');
       }
 
       const numberToPurchase = availableNumbers[0].phoneNumber;
       const friendlyName = `${firstName} ${lastName}`;
-      
+
       // Purchase the number
       const purchased = await twilioService.purchaseNumber(numberToPurchase, friendlyName);
       twilioNumber = purchased.phoneNumber;
-      
+
       // Add to messaging service
       await twilioService.addToMessagingService(purchased.sid);
-      
+
       // Add to A2P campaign
       await twilioService.addToCampaign(purchased.sid);
-      
+
       console.log(`[Onboard Step 4] ✅ 650 number purchased: ${twilioNumber}`);
     } catch (error) {
       console.error('[Onboard Step 4] Twilio purchase failed:', error.message);
@@ -193,14 +250,17 @@ router.post('/ghl-and-twilio', async (req, res) => {
       ghlUserId: ghlUserId,
       email: email,
       twilioNumber: twilioNumber,
-      message: 'GHL account created and phone number assigned'
+      ghlAlreadyExists: ghlAlreadyExists,
+      message: ghlAlreadyExists
+        ? 'GHL account already existed, phone number processed'
+        : 'GHL account created and phone number assigned'
     });
 
   } catch (error) {
     console.error('[Onboard Step 4] Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: error.message 
+      error: error.message
     });
   }
 });

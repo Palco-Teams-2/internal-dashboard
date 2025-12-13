@@ -22,6 +22,7 @@ export default function CloserOnboarding() {
     password: ''
   });
   const [twilioNumber, setTwilioNumber] = useState('');
+  const [resumeNotice, setResumeNotice] = useState('');
 
   const totalSteps = 6;
 
@@ -51,6 +52,9 @@ export default function CloserOnboarding() {
           email: data.email,
           password: data.temporaryPassword
         });
+        if (data.alreadyExists) {
+          setResumeNotice('Google Workspace account already exists - resuming onboarding');
+        }
         setIsProcessing(false);
         setCurrentStep(2);
       } else {
@@ -78,8 +82,11 @@ export default function CloserOnboarding() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
+        if (data.alreadyExists) {
+          setResumeNotice('Zoom account already exists - resuming');
+        }
         setIsSendingInvite(false);
         setInviteSent(true);
       } else {
@@ -107,8 +114,11 @@ export default function CloserOnboarding() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
+        if (data.alreadyExists) {
+          setResumeNotice('Already a Calendly member - resuming');
+        }
         setIsSendingInvite(false);
         setInviteSent(true);
       } else {
@@ -136,8 +146,11 @@ export default function CloserOnboarding() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
+        if (data.ghlAlreadyExists) {
+          setResumeNotice('GHL account already exists - resuming');
+        }
         setTwilioNumber(data.twilioNumber);
         setIsSendingInvite(false);
         setInviteSent(true);
@@ -161,6 +174,24 @@ export default function CloserOnboarding() {
             Let's get you onboarded with all your tools
           </p>
         </div>
+
+        {/* Resume Notice Banner */}
+        {resumeNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3"
+          >
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <span className="text-sm text-amber-800 font-medium">{resumeNotice}</span>
+            <button
+              onClick={() => setResumeNotice('')}
+              className="ml-auto text-amber-600 hover:text-amber-800 text-sm font-medium"
+            >
+              Dismiss
+            </button>
+          </motion.div>
+        )}
 
         <div className="mb-12">
           <div className="flex items-center justify-between mb-3">

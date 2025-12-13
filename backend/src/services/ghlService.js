@@ -9,6 +9,7 @@ class GHLService {
   constructor() {
     this.apiKey = process.env.GHL_API_KEY;
     this.locationId = process.env.GHL_LOCATION_ID;
+    this.companyId = process.env.GHL_COMPANY_ID;
     
     this.client = axios.create({
       baseURL: GHL_API_BASE,
@@ -97,13 +98,34 @@ class GHLService {
     }
   }
 
-  // Create a new user in GHL
+  // Get user by email
+  async getUserByEmail(email) {
+    try {
+      console.log(`[GHL Service] Searching for user by email: ${email}`);
+      const users = await this.getUsers();
+
+      const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+      if (user) {
+        console.log(`[GHL Service] ✅ Found user: ${user.id}`);
+        return user;
+      }
+
+      console.log(`[GHL Service] User not found: ${email}`);
+      return null;
+    } catch (error) {
+      console.error('[GHL Service] Error finding user by email:', error.message);
+      return null;
+    }
+  }
+
+  // Create a new user in GHL (sends invitation email automatically)
   async createUser(firstName, lastName, email, role = 'user') {
     try {
       console.log(`[GHL Service] Creating user: ${email}`);
-      
+
       const userData = {
-        companyId: '0-229-055', // Agency company ID
+        companyId: this.companyId,
         firstName: firstName,
         lastName: lastName,
         email: email,
@@ -145,14 +167,12 @@ class GHLService {
         }
       };
 
-      const response = await this.client.post('/users/', userData, {
-        params: {
-          locationId: this.locationId
-        }
-      });
+      console.log(`[GHL Service] Sending request to /users/ with locationId: ${this.locationId}`);
 
-      console.log(`[GHL Service] ✅ User created in location ${this.locationId}: ${response.data.id || response.data.userId}`);
-      
+      const response = await this.client.post('/users/', userData);
+
+      console.log(`[GHL Service] ✅ User created: ${JSON.stringify(response.data)}`);
+
       return {
         success: true,
         userId: response.data.id || response.data.userId,
@@ -210,7 +230,7 @@ class GHLService {
       // GHL uses the linkedUser field to assign numbers to users
       const phoneNumberId = ghlNumber.id || ghlNumber._id;
       
-      const response = await this.client.put(
+      await this.client.put(
         `/phone-system/numbers/${phoneNumberId}`,
         {
           linkedUser: userId,

@@ -210,12 +210,14 @@ export async function inviteUser(email, firstName, lastName) {
   try {
     console.log(`[Calendly] Inviting user: ${email}`);
     const user = await getCurrentUser();
-    
-    const response = await calendlyClient.post('/organization_invitations', {
-      email: email,
-      organization: user.current_organization
+
+    // Extract organization path from URI (e.g., https://api.calendly.com/organizations/abc123 -> /organizations/abc123)
+    const orgPath = user.current_organization.replace('https://api.calendly.com', '');
+
+    const response = await calendlyClient.post(`${orgPath}/invitations`, {
+      email: email
     });
-    
+
     console.log(`[Calendly] ✅ Invitation sent to ${email}`);
     return {
       success: true,

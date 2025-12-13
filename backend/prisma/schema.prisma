@@ -75,7 +75,7 @@ model Closer {
   lastName              String
   email                 String   @unique
   phoneNumber           String?
-  
+
   // Account IDs across platforms
   googleWorkspaceId     String?
   calendlyUserId        String?
@@ -83,15 +83,54 @@ model Closer {
   ghlUserId             String?
   twilioNumberSid       String?
   twilioPhoneNumber     String?  // The 650 number assigned
-  
+
   // Status tracking
   status                String   @default("active") // active, offboarding, offboarded
   onboardedAt           DateTime @default(now())
   offboardedAt          DateTime?
-  
+
   // Metadata
   notes                 String?
-  
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model OnboardingRecord {
+  id                    String   @id @default(cuid())
+
+  // User info
+  firstName             String
+  lastName              String
+  personalEmail         String
+  workEmail             String?  // Generated @tjr-trades.com email
+
+  // Overall status
+  status                String   @default("in_progress") // in_progress, completed, failed
+  currentStep           Int      @default(1)
+
+  // Step statuses: pending, in_progress, completed, failed, skipped
+  googleWorkspaceStatus String   @default("pending")
+  googleWorkspaceError  String?
+
+  zoomStatus            String   @default("pending")
+  zoomError             String?
+
+  calendlyStatus        String   @default("pending")
+  calendlyError         String?
+
+  ghlStatus             String   @default("pending")
+  ghlError              String?
+  ghlUserId             String?
+
+  twilioStatus          String   @default("pending")
+  twilioError           String?
+  twilioNumber          String?
+
+  // Timestamps
+  startedAt             DateTime @default(now())
+  completedAt           DateTime?
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
