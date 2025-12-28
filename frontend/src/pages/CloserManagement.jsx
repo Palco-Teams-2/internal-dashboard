@@ -17,7 +17,10 @@ import {
   Users,
   Search,
   Settings,
-  Trash2
+  Trash2,
+  Edit,
+  Pencil,
+  X
 } from 'lucide-react';
 
 export default function CloserManagement() {
@@ -50,6 +53,16 @@ export default function CloserManagement() {
   const [activeTab, setActiveTab] = useState('closers');
   const [activeProductTab, setActiveProductTab] = useState(0);
   const [linkSearchQuery, setLinkSearchQuery] = useState('');
+  const [editingLink, setEditingLink] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    closerEmail: '',
+    initialPrice: 0,
+    renewalPrice: 0,
+    installments: 0,
+    planType: 'one_time',
+    billingPeriod: 30
+  });
 
   // Fetch Whop closer links by product
   const { data: whopProductsData, isLoading: whopLoading } = useQuery({
@@ -65,12 +78,93 @@ export default function CloserManagement() {
   const products = whopProductsData?.data || [];
   const activeProduct = products[activeProductTab] || null;
   const [deletingCloser, setDeletingCloser] = useState(null);
+  const [deletingLink, setDeletingLink] = useState(null);
+
+  // Delete single link mutation
+  const deleteLinkMutation = useMutation({
+    mutationFn: async (planId) => {
+      const response = await fetch(`http://localhost:8080/api/whop/plan/${planId}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete link');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['whop-closer-links-by-product']);
+      setDeletingLink(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete link:', error);
+      alert(`Failed to delete link: ${error.message}`);
+      setDeletingLink(null);
+    }
+  });
+
+  // Edit link mutation
+  const editLinkMutation = useMutation({
+    mutationFn: async ({ planId, updates }) => {
+      const response = await fetch(`http://localhost:8080/api/whop/plan/${planId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update link');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['whop-closer-links-by-product']);
+      setShowEditModal(false);
+      setEditingLink(null);
+    },
+    onError: (error) => {
+      console.error('Failed to update link:', error);
+      alert(`Failed to update link: ${error.message}`);
+    }
+  });
+
+  const handleDeleteLink = (link) => {
+    if (window.confirm(`Are you sure you want to delete this payment link for ${link.closerEmail}?`)) {
+      setDeletingLink(link.id);
+      deleteLinkMutation.mutate(link.id);
+    }
+  };
+
+  const handleEditLink = (link) => {
+    setEditingLink(link);
+    setEditFormData({
+      closerEmail: link.closerEmail,
+      initialPrice: link.price || 0,
+      renewalPrice: 0, // We'll need to fetch this from the plan details
+      installments: 0,
+      planType: 'one_time',
+      billingPeriod: 30
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSubmitEdit = (e) => {
+    e.preventDefault();
+    if (!editingLink) return;
+
+    editLinkMutation.mutate({
+      planId: editingLink.id,
+      updates: editFormData
+    });
+  };
 
   // Delete closer links mutation
   const deleteCloserLinksMutation = useMutation({
-    mutationFn: async (closerEmail) => {
+    mutationFn: async ({ closerEmail, planIds }) => {
       const response = await fetch(`http://localhost:8080/api/whop/closer-links/${encodeURIComponent(closerEmail)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planIds })
       });
       if (!response.ok) {
         const error = await response.json();
@@ -92,7 +186,12 @@ export default function CloserManagement() {
   const handleDeleteCloserLinks = (closer) => {
     if (window.confirm(`Are you sure you want to delete all payment links for ${closer.closerName}? This action cannot be undone.`)) {
       setDeletingCloser(closer.email);
-      deleteCloserLinksMutation.mutate(closer.email);
+      // Extract all plan IDs from closer's links
+      const planIds = closer.links.map(link => link.id);
+      deleteCloserLinksMutation.mutate({ 
+        closerEmail: closer.email,
+        planIds 
+      });
     }
   };
 
@@ -848,6 +947,25 @@ export default function CloserManagement() {
                                       <Copy className="h-4 w-4" />
                                     )}
                                   </button>
+                                  <button
+                                    onClick={() => handleEditLink(link)}
+                                    className="p-1.5 rounded hover:bg-blue-100 text-blue-600 transition-colors"
+                                    title="Edit link"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteLink(link)}
+                                    disabled={deletingLink === link.id}
+                                    className="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
+                                    title="Delete link"
+                                  >
+                                    {deletingLink === link.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </button>
                                 </div>
                               ) : (
                                 <span className="text-gray-300">—</span>
@@ -1194,6 +1312,149 @@ export default function CloserManagement() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Link Modal */}
+      <AnimatePresence>
+        {showEditModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowEditModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Edit Payment Link</h3>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitEdit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Closer Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editFormData.closerEmail}
+                    onChange={(e) => setEditFormData({ ...editFormData, closerEmail: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Type
+                  </label>
+                  <select
+                    value={editFormData.planType}
+                    onChange={(e) => setEditFormData({ ...editFormData, planType: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="one_time">One-Time Payment</option>
+                    <option value="renewal">Recurring Payment</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Initial Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.initialPrice}
+                    onChange={(e) => setEditFormData({ ...editFormData, initialPrice: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {editFormData.planType === 'renewal' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Renewal Price ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editFormData.renewalPrice}
+                        onChange={(e) => setEditFormData({ ...editFormData, renewalPrice: parseFloat(e.target.value) })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Number of Installments
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.installments}
+                        onChange={(e) => setEditFormData({ ...editFormData, installments: parseInt(e.target.value) })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Billing Period (days)
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.billingPeriod}
+                        onChange={(e) => setEditFormData({ ...editFormData, billingPeriod: parseInt(e.target.value) })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    disabled={editLinkMutation.isPending}
+                    className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editLinkMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {editLinkMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}

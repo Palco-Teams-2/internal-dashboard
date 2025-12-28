@@ -10,12 +10,14 @@ const WHOP_BASE_URL = 'https://api.whop.com/api/v1';
 // Priority product IDs (for ordering)
 const PRIORITY_PRODUCTS = {
   BLUEPRINT_PLUS: 'prod_lb9a1dpjmRkz8',
+  BLUEPRINT_STANDARD: 'prod_XDKI8nmaP2ah9',
   DEPOSIT_PAYMENT_LINKS: 'prod_bqc3Pdc9iolas'
 };
 
 // Product display name overrides
 const PRODUCT_DISPLAY_NAMES = {
   'prod_lb9a1dpjmRkz8': "TJR's Daytrading Blueprint+",
+  'prod_XDKI8nmaP2ah9': "TJR's Blueprint (Standard)",
   'prod_bqc3Pdc9iolas': 'Deposit Payment Links'
 };
 
@@ -36,8 +38,8 @@ let linksCache = null;
 let linksCacheTime = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Parse internal_notes to extract closer email and link type
-function parseInternalNotes(notes) {
+// Parse internal_notes and plan data to extract closer email and generate dynamic label
+function parseInternalNotes(notes, initialPrice, renewalPrice, planType) {
   if (!notes) return null;
 
   // Skip non-closer entries
@@ -45,29 +47,80 @@ function parseInternalNotes(notes) {
     return null;
   }
 
-  // Patterns: pif-email, deposit-email, deposit500-email, split3500-email, PSPLIT-email
+  // Extract email and prefix pattern
   const patterns = [
-    { regex: /^pif-(.+@.+)$/i, type: 'pif', label: '7k PIF' },
-    { regex: /^deposit500-(.+@.+)$/i, type: 'deposit500', label: 'Deposit $500' },
-    { regex: /^deposit-(.+@.+)$/i, type: 'deposit', label: 'Deposit $250' },
-    { regex: /^split3500-(.+@.+)$/i, type: 'split', label: '3500 Split' },
-    { regex: /^PSPLIT-(.+@.+)$/i, type: 'psplit', label: 'P-Split' },
+    { regex: /^pif-(.+@.+)$/i, prefix: 'pif' },
+    { regex: /^split1k-(.+@.+)$/i, prefix: 'split1k' },
+    { regex: /^split2k-(.+@.+)$/i, prefix: 'split2k' },
+    { regex: /^splitlk-(.+@.+)$/i, prefix: 'splitlk' },
+    { regex: /^split3500-(.+@.+)$/i, prefix: 'split3500' },
+    { regex: /^split-(.+@.+)$/i, prefix: 'split' },
+    { regex: /^deposit500-(.+@.+)$/i, prefix: 'deposit500' },
+    { regex: /^deposit-(.+@.+)$/i, prefix: 'deposit' },
+    { regex: /^psplit-(.+@.+)$/i, prefix: 'psplit' },
+    { regex: /^PSPLIT-(.+@.+)$/i, prefix: 'psplit' },
     // Simple email format (no prefix)
-    { regex: /^([a-z0-9-]+@tjr-trades\.com)$/i, type: 'other', label: 'Other' }
+    { regex: /^([a-z0-9-]+@tjr-trades\.com)$/i, prefix: 'other' }
   ];
+
+  let email = null;
+  let prefix = null;
 
   for (const pattern of patterns) {
     const match = notes.match(pattern.regex);
     if (match) {
-      return {
-        email: match[1].toLowerCase(),
-        type: pattern.type,
-        typeLabel: pattern.label
-      };
+      email = match[1].toLowerCase();
+      prefix = pattern.prefix;
+      break;
     }
   }
 
-  return null;
+  if (!email) return null;
+
+  // Generate label based on prefix and price
+  let type = prefix;
+  let typeLabel = 'Other';
+
+  if (prefix === 'pif') {
+    // PIF - label based on initial price
+    if (initialPrice === 7000) {
+      typeLabel = '7K PIF';
+      type = 'pif7k';
+    } else if (initialPrice === 5000) {
+      typeLabel = '5K PIF';
+      type = 'pif5k';
+    } else {
+      typeLabel = `${initialPrice / 1000}K PIF`;
+      type = `pif${initialPrice}`;
+    }
+  } else if (prefix === 'split1k' || prefix === 'splitlk') {
+    typeLabel = 'SPLIT $1K';
+    type = 'split1k';
+  } else if (prefix === 'split2k') {
+    typeLabel = 'SPLIT $2K';
+    type = 'split2k';
+  } else if (prefix === 'split3500') {
+    typeLabel = '3500 SPLIT';
+    type = 'split3500';
+  } else if (prefix === 'split') {
+    typeLabel = 'SPLIT';
+    type = 'split';
+  } else if (prefix === 'deposit500') {
+    typeLabel = 'DEPOSIT $500';
+    type = 'deposit500';
+  } else if (prefix === 'deposit') {
+    typeLabel = 'DEPOSIT $250';
+    type = 'deposit';
+  } else if (prefix === 'psplit') {
+    typeLabel = 'P-SPLIT';
+    type = 'psplit';
+  }
+
+  return {
+    email: email,
+    type: type,
+    typeLabel: typeLabel
+  };
 }
 
 // Fetch all products from Whop
@@ -112,7 +165,18 @@ async function getCloserLinksForProduct(productId, productName) {
       pageCount++;
 
       for (const plan of data.data || []) {
-        const parsed = parseInternalNotes(plan.internal_notes);
+        // CRITICAL: Only include plans that actually belong to this product
+        // Whop API sometimes returns plans from other products
+        if (plan.product?.id !== productId) {
+          continue;
+        }
+        
+        const parsed = parseInternalNotes(
+          plan.internal_notes,
+          plan.initial_price,
+          plan.renewal_price,
+          plan.plan_type
+        );
         if (parsed) {
           links.push({
             id: plan.id,
@@ -146,7 +210,7 @@ export async function getCloserLinksGroupedByProduct() {
   try {
     console.log('[Whop] Fetching closer links and grouping by product...');
 
-    // Only fetch from priority products for speed (Blueprint+ and Deposit Payment Links)
+    // Only fetch from priority products for speed (Blueprint+, Blueprint Standard, and Deposit Payment Links)
     const priorityIds = Object.values(PRIORITY_PRODUCTS);
     const allLinks = [];
 
@@ -181,10 +245,12 @@ export async function getCloserLinksGroupedByProduct() {
     // Convert to array and filter products with links
     let productsWithLinks = Object.values(productMap);
 
-    // Sort: Blueprint+ first, Deposit Payment Links second, then alphabetically
+    // Sort: Blueprint+ first, Blueprint Standard second, Deposit Payment Links third, then alphabetically
     productsWithLinks.sort((a, b) => {
       if (a.productId === PRIORITY_PRODUCTS.BLUEPRINT_PLUS) return -1;
       if (b.productId === PRIORITY_PRODUCTS.BLUEPRINT_PLUS) return 1;
+      if (a.productId === PRIORITY_PRODUCTS.BLUEPRINT_STANDARD) return -1;
+      if (b.productId === PRIORITY_PRODUCTS.BLUEPRINT_STANDARD) return 1;
       if (a.productId === PRIORITY_PRODUCTS.DEPOSIT_PAYMENT_LINKS) return -1;
       if (b.productId === PRIORITY_PRODUCTS.DEPOSIT_PAYMENT_LINKS) return 1;
       return a.productName.localeCompare(b.productName);
@@ -329,7 +395,7 @@ export async function getLinksForCloser(closerEmail) {
     const priorityIds = Object.values(PRIORITY_PRODUCTS);
     const allLinks = [];
 
-    // Only fetch from Blueprint+ and Deposit Payment Links
+    // Only fetch from Blueprint+, Blueprint Standard, and Deposit Payment Links
     for (let i = 0; i < priorityIds.length; i++) {
       const productId = priorityIds[i];
       const productName = PRODUCT_DISPLAY_NAMES[productId] || productId;
@@ -407,12 +473,95 @@ export async function deleteLinksForCloser(closerEmail, productId = null) {
   }
 }
 
+// Delete a single plan by ID
+export async function deletePlan(planId) {
+  try {
+    console.log(`\n🗑️  [Whop DELETE] Plan ID: ${planId}`);
+    
+    const response = await whopClient.delete(`/plans/${planId}`);
+    
+    console.log(`✅ [Whop DELETE] Successfully deleted plan: ${planId}\n`);
+    
+    // Clear cache after deletion
+    clearLinksCache();
+    
+    return response.data;
+  } catch (error) {
+    console.error(`❌ [Whop DELETE] Error deleting plan ${planId}:`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Update a plan
+export async function updatePlan(planId, updates) {
+  try {
+    console.log(`\n✏️  [Whop UPDATE] Plan ID: ${planId}`);
+    console.log(`📝 [Whop UPDATE] Requested changes:`, JSON.stringify(updates, null, 2));
+    
+    // Prepare update payload based on what fields are provided
+    const payload = {};
+    
+    if (updates.closerEmail !== undefined) {
+      // Update internal_notes with new email while preserving prefix
+      const currentPlan = await whopClient.get(`/plans/${planId}`);
+      const currentNotes = currentPlan.data.internal_notes || '';
+      
+      // Extract prefix from current notes
+      const prefixMatch = currentNotes.match(/^([a-z0-9]+)-/i);
+      const prefix = prefixMatch ? prefixMatch[1] : 'pif';
+      
+      payload.internal_notes = `${prefix}-${updates.closerEmail}`;
+      console.log(`📧 [Whop UPDATE] Email: ${currentNotes} → ${payload.internal_notes}`);
+    }
+    
+    if (updates.initialPrice !== undefined) {
+      payload.initial_price = parseFloat(updates.initialPrice);
+      console.log(`💰 [Whop UPDATE] Initial Price: $${payload.initial_price}`);
+    }
+    
+    if (updates.renewalPrice !== undefined) {
+      payload.renewal_price = parseFloat(updates.renewalPrice);
+      console.log(`💰 [Whop UPDATE] Renewal Price: $${payload.renewal_price}`);
+    }
+    
+    if (updates.installments !== undefined) {
+      payload.split_pay_required_payments = parseInt(updates.installments);
+      console.log(`📊 [Whop UPDATE] Installments: ${payload.split_pay_required_payments}`);
+    }
+    
+    if (updates.planType !== undefined) {
+      payload.plan_type = updates.planType;
+      console.log(`🔄 [Whop UPDATE] Plan Type: ${payload.plan_type}`);
+    }
+    
+    if (updates.billingPeriod !== undefined) {
+      payload.billing_period = parseInt(updates.billingPeriod);
+      console.log(`📅 [Whop UPDATE] Billing Period: ${payload.billing_period} days`);
+    }
+    
+    console.log(`🚀 [Whop UPDATE] Sending to Whop API...`);
+    const response = await whopClient.patch(`/plans/${planId}`, payload);
+    
+    console.log(`✅ [Whop UPDATE] Successfully updated plan: ${planId}\n`);
+    
+    // Clear cache after update
+    clearLinksCache();
+    
+    return response.data;
+  } catch (error) {
+    console.error(`❌ [Whop UPDATE] Error updating plan ${planId}:`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
 export default {
   getAllCloserLinks,
   getCloserLinksGrouped,
   getCloserLinksGroupedByProduct,
   getLinksForCloser,
   deleteLinksForCloser,
+  deletePlan,
+  updatePlan,
   clearLinksCache,
   PRIORITY_PRODUCTS
 };

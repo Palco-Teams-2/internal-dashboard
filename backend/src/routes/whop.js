@@ -76,8 +76,36 @@ router.get('/closer-links/:email', async (req, res) => {
 router.delete('/closer-links/:email', async (req, res) => {
   try {
     const { email } = req.params;
-    console.log(`[Whop API] Deleting all links for closer: ${email}`);
+    const { planIds } = req.body; // Accept plan IDs from frontend
+    console.log(`[Whop API] Deleting links for closer: ${email}`);
 
+    // If plan IDs provided, delete directly without fetching
+    if (planIds && Array.isArray(planIds) && planIds.length > 0) {
+      console.log(`[Whop API] Deleting ${planIds.length} plans directly`);
+      
+      let deletedCount = 0;
+      const errors = [];
+
+      for (const planId of planIds) {
+        try {
+          await whopService.deletePlan(planId);
+          deletedCount++;
+        } catch (error) {
+          console.error(`[Whop API] Failed to delete plan ${planId}:`, error.message);
+          errors.push({ planId, error: error.message });
+        }
+      }
+
+      return res.json({
+        success: true,
+        message: `Deleted ${deletedCount}/${planIds.length} links for ${email}`,
+        deletedCount,
+        totalLinks: planIds.length,
+        errors
+      });
+    }
+
+    // Fallback to original method
     const result = await whopService.deleteLinksForCloser(email);
 
     res.json({
@@ -87,6 +115,51 @@ router.delete('/closer-links/:email', async (req, res) => {
     });
   } catch (error) {
     console.error('[Whop API] Delete error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/whop/plan/:planId - Delete a single plan
+router.delete('/plan/:planId', async (req, res) => {
+  try {
+    const { planId } = req.params;
+    console.log(`[Whop API] Deleting plan: ${planId}`);
+
+    const result = await whopService.deletePlan(planId);
+
+    res.json({
+      success: true,
+      message: `Plan ${planId} deleted successfully`,
+      data: result
+    });
+  } catch (error) {
+    console.error('[Whop API] Delete plan error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/whop/plan/:planId - Update a plan
+router.put('/plan/:planId', async (req, res) => {
+  try {
+    const { planId } = req.params;
+    const updates = req.body;
+    console.log(`[Whop API] Updating plan: ${planId}`, updates);
+
+    const result = await whopService.updatePlan(planId, updates);
+
+    res.json({
+      success: true,
+      message: `Plan ${planId} updated successfully`,
+      data: result
+    });
+  } catch (error) {
+    console.error('[Whop API] Update plan error:', error.message);
     res.status(500).json({
       success: false,
       error: error.message
