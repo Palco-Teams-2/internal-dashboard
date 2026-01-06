@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "description": "Sales Operations Platform",
   "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "backend:dev": "cd backend && npm run dev",
+    "backend:start": "cd backend && npm run start"
+  },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",

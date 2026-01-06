@@ -10,7 +10,7 @@ import CloserManagement from './pages/CloserManagement';
 import SystemStatus from './pages/Systemstatus';
 import CloserOnboarding from './pages/CloserOnboarding';
 import CallsManagement from './pages/CallsManagement';
-import SalesAnalytics from './pages/SalesAnalytics';
+import SalesAnalytics from './pages/Salesanalytics';
 
 // Placeholder pages for new routes
 const TeamManagement = () => <CloserManagement />;
